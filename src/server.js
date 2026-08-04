@@ -1,45 +1,46 @@
-//server.js
+//server.js — arranque: servidor HTTP, Socket.IO y listen.
 
-import express from "express";
-import ticketsRouter from "./routes/tickets.js";
-import authRouter from "./routes/auth.js";
+import { createServer } from "node:http";
+import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
+import app from "./app.js";
 import { conectarDB } from "./data/db.js";
-import { noEncontrado, manejadorErrores } from "./middlewares/errores.js";
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 const APP_NAME = process.env.APP_NAME || "API de Tickets";
 
-//Middleware -Trae los http en JSON
-app.use(express.json());
+// Socket.IO se monta sobre el mismo servidor HTTP que Express.
+// Sin opción cors: la página de prueba se sirve desde este mismo origen.
+const httpServer = createServer(app);
+const io = new Server(httpServer);
 
-//Middleware
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
+// Nadie se conecta sin identificarse: mismo JWT que la API REST.
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+
+  if (!token) {
+    return next(new Error("No autenticado: falta el token"));
+  }
+
+  try {
+    socket.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    next(new Error("Token inválido o caducado"));
+  }
 });
 
-// Indice del server
-app.get("/", (req, res) =>
-  res.json({
-    nombre: APP_NAME,
-    endpoints: ["/tickets", "/health", "/version"],
-  }),
-);
+io.on("connection", (socket) => {
+  // La sala sale del token, no de lo que diga el cliente.
+  socket.join(`usuario:${socket.user.sub}`);
 
-// Salud del server
-app.get("/health", (req, res) => res.json({ status: "ok" }));
-app.get("/version", (req, res) => res.json({ version: "1.0.0" }));
+  socket.emit("bienvenida", { msg: "Conectado", rol: socket.user.rol });
+});
 
-// Routers
-app.use("/auth", authRouter);
-app.use("/tickets", ticketsRouter);
-
-// Errores
-app.use(noEncontrado);
-app.use(manejadorErrores);
+// Las rutas llegan a io con req.app.get("io"), sin importar este archivo.
+app.set("io", io);
 
 await conectarDB();
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`${APP_NAME} escuchando en http://localhost:${PORT}`);
 });

@@ -8,45 +8,63 @@ import { requireAuth, requireRol } from "../middlewares/auth.js";
 
 const router = Router();
 
-const CAMPOS_ORDENABLES = ["titulo", "estado", "prioridad", "createdAt", "updatedAt"];
+const CAMPOS_ORDENABLES = [
+  "titulo",
+  "estado",
+  "prioridad",
+  "createdAt",
+  "updatedAt",
+];
 const LIMITE_MAXIMO = 100;
 
 // GET /tickets -> listado con paginación, filtros y ordenación
 router.get("/", async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, estado, prioridad, sort = "-createdAt" } = req.query;
+    const {
+      page = 1,
+      limit = 10,
+      estado,
+      prioridad,
+      sort = "-createdAt",
+    } = req.query;
 
     const pagina = Number(page);
     const porPagina = Number(limit);
 
     if (!Number.isInteger(pagina) || pagina < 1) {
-      return res.status(400).json({ error: "page debe ser un entero mayor o igual a 1" });
+      return res
+        .status(400)
+        .json({ error: "page debe ser un entero mayor o igual a 1" });
     }
 
-    if (!Number.isInteger(porPagina) || porPagina < 1 || porPagina > LIMITE_MAXIMO) {
+    if (
+      !Number.isInteger(porPagina) ||
+      porPagina < 1 ||
+      porPagina > LIMITE_MAXIMO
+    ) {
       return res
         .status(400)
         .json({ error: `limit debe ser un entero entre 1 y ${LIMITE_MAXIMO}` });
     }
 
     if (estado && !ESTADOS.includes(estado)) {
-      return res
-        .status(400)
-        .json({ error: `estado inválido. Valores permitidos: ${ESTADOS.join(", ")}` });
+      return res.status(400).json({
+        error: `estado inválido. Valores permitidos: ${ESTADOS.join(", ")}`,
+      });
     }
 
     if (prioridad && !PRIORIDADES.includes(prioridad)) {
-      return res
-        .status(400)
-        .json({ error: `prioridad inválida. Valores permitidos: ${PRIORIDADES.join(", ")}` });
+      return res.status(400).json({
+        error: `prioridad inválida. Valores permitidos: ${PRIORIDADES.join(", ")}`,
+      });
     }
 
     // sort admite "campo" (ascendente) o "-campo" (descendente)
     const campoOrden = typeof sort === "string" ? sort.replace(/^-/, "") : "";
     if (!CAMPOS_ORDENABLES.includes(campoOrden)) {
-      return res
-        .status(400)
-        .json({ error: `sort inválido. Campos permitidos: ${CAMPOS_ORDENABLES.join(", ")}` });
+      return res.status(400).json({
+        error: `sort inválido. Campos permitidos: ${CAMPOS_ORDENABLES.join(", ")}`,
+      });
     }
 
     const filtro = {};
@@ -71,7 +89,9 @@ router.get("/", async (req, res, next) => {
 router.get("/:id", async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(400).json({ error: "El id no tiene un formato válido de MongoDB" });
+      return res
+        .status(400)
+        .json({ error: "El id no tiene un formato válido de MongoDB" });
     }
 
     const ticketDb = await Ticket.findById(req.params.id);
@@ -93,13 +113,18 @@ router.post("/", requireAuth, async (req, res, next) => {
 
     const ticketNuevo = await Ticket.create({ titulo, estado, prioridad });
 
+    const io = req.app.get("io");
+    io?.emit("ticket:creado", ticketNuevo); // a todos
+    io?.to(`usuario:${req.user.sub}`).emit("ticket:confirmado", ticketNuevo); // solo al creador
+
     res.status(201).json(ticketNuevo);
   } catch (error) {
     // Datos mal enviados por el cliente: 400, no 500
     if (error.name === "ValidationError") {
-      return res
-        .status(400)
-        .json({ error: "Datos inválidos", detalles: detallesDeValidacion(error) });
+      return res.status(400).json({
+        error: "Datos inválidos",
+        detalles: detallesDeValidacion(error),
+      });
     }
     next(error);
   }
@@ -109,7 +134,9 @@ router.post("/", requireAuth, async (req, res, next) => {
 router.patch("/:id", requireAuth, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(400).json({ error: "El id no tiene un formato válido de MongoDB" });
+      return res
+        .status(400)
+        .json({ error: "El id no tiene un formato válido de MongoDB" });
     }
 
     // Solo tocamos los campos que vengan en el cuerpo
@@ -134,34 +161,44 @@ router.patch("/:id", requireAuth, async (req, res, next) => {
       return res.status(404).json({ error: "Ticket no encontrado" });
     }
 
+    req.app.get("io")?.emit("ticket:actualizado", ticketDb);
+
     res.json(ticketDb);
   } catch (error) {
     if (error.name === "ValidationError") {
-      return res
-        .status(400)
-        .json({ error: "Datos inválidos", detalles: detallesDeValidacion(error) });
+      return res.status(400).json({
+        error: "Datos inválidos",
+        detalles: detallesDeValidacion(error),
+      });
     }
     next(error);
   }
 });
 
 // DELETE /tickets/:id -> eliminar
-router.delete("/:id", requireAuth, requireRol("admin"), async (req, res, next) => {
-  try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(400).json({ error: "El id no tiene un formato válido de MongoDB" });
+router.delete(
+  "/:id",
+  requireAuth,
+  requireRol("admin"),
+  async (req, res, next) => {
+    try {
+      if (!mongoose.isValidObjectId(req.params.id)) {
+        return res
+          .status(400)
+          .json({ error: "El id no tiene un formato válido de MongoDB" });
+      }
+
+      const ticketDb = await Ticket.findByIdAndDelete(req.params.id);
+
+      if (!ticketDb) {
+        return res.status(404).json({ error: "Ticket no encontrado" });
+      }
+
+      res.status(204).end(); // éxito sin cuerpo
+    } catch (error) {
+      next(error);
     }
-
-    const ticketDb = await Ticket.findByIdAndDelete(req.params.id);
-
-    if (!ticketDb) {
-      return res.status(404).json({ error: "Ticket no encontrado" });
-    }
-
-    res.status(204).end(); // éxito sin cuerpo
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 export default router;
