@@ -48,11 +48,11 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ## Autenticación
 
-| Operación | Verbo  | Ruta             | Éxito | Devuelve                |
-| --------- | ------ | ---------------- | ----- | ----------------------- |
-| Registro  | `POST` | `/auth/registro` | 201   | `{ id, email, rol }`    |
-| Login     | `POST` | `/auth/login`    | 200   | `{ token }`             |
-| Quién soy | `GET`  | `/auth/yo`       | 200   | `{ id, email, rol }`    |
+| Operación | Verbo  | Ruta             | Éxito | Devuelve             |
+| --------- | ------ | ---------------- | ----- | -------------------- |
+| Registro  | `POST` | `/auth/registro` | 201   | `{ id, email, rol }` |
+| Login     | `POST` | `/auth/login`    | 200   | `{ token }`          |
+| Quién soy | `GET`  | `/auth/yo`       | 200   | `{ id, email, rol }` |
 
 El flujo es **registro → login → token → petición protegida**. El token se manda en cada petición:
 
@@ -66,25 +66,25 @@ El login responde el mismo `Credenciales inválidas` tanto si el email no existe
 
 ## API REST
 
-| Operación  | Verbo    | Ruta           | Éxito | Protección                       |
-| ---------- | -------- | -------------- | ----- | -------------------------------- |
-| Crear      | `POST`   | `/tickets`     | 201   | Token                            |
-| Leer       | `GET`    | `/tickets`     | 200   | Pública                          |
-| Leer uno   | `GET`    | `/tickets/:id` | 200   | Pública                          |
-| Actualizar | `PATCH`  | `/tickets/:id` | 200   | Token                            |
-| Eliminar   | `DELETE` | `/tickets/:id` | 204   | Token + rol `admin`              |
+| Operación  | Verbo    | Ruta           | Éxito | Protección          |
+| ---------- | -------- | -------------- | ----- | ------------------- |
+| Crear      | `POST`   | `/tickets`     | 201   | Token               |
+| Leer       | `GET`    | `/tickets`     | 200   | Pública             |
+| Leer uno   | `GET`    | `/tickets/:id` | 200   | Pública             |
+| Actualizar | `PATCH`  | `/tickets/:id` | 200   | Token               |
+| Eliminar   | `DELETE` | `/tickets/:id` | 204   | Token + rol `admin` |
 
 ### Paginación, filtros y ordenación
 
 `GET /tickets` acepta estos parámetros de consulta:
 
-| Parámetro   | Por defecto   | Notas                                                          |
-| ----------- | ------------- | -------------------------------------------------------------- |
-| `page`      | `1`           | Entero ≥ 1                                                     |
-| `limit`     | `10`          | Entero entre 1 y 100                                           |
-| `estado`    | —             | `abierto`, `en progreso` o `cerrado`                           |
-| `prioridad` | —             | `alta`, `media` o `baja`                                       |
-| `sort`      | `-createdAt`  | `titulo`, `estado`, `prioridad`, `createdAt`, `updatedAt`; `-` = descendente |
+| Parámetro   | Por defecto  | Notas                                                                        |
+| ----------- | ------------ | ---------------------------------------------------------------------------- |
+| `page`      | `1`          | Entero ≥ 1                                                                   |
+| `limit`     | `10`         | Entero entre 1 y 100                                                         |
+| `estado`    | —            | `abierto`, `en progreso` o `cerrado`                                         |
+| `prioridad` | —            | `alta`, `media` o `baja`                                                     |
+| `sort`      | `-createdAt` | `titulo`, `estado`, `prioridad`, `createdAt`, `updatedAt`; `-` = descendente |
 
 Respuesta:
 
@@ -93,23 +93,25 @@ Respuesta:
   "total": 42,
   "page": 1,
   "limit": 10,
-  "tickets": [ /* ... */ ]
+  "tickets": [
+    /* ... */
+  ]
 }
 ```
 
 ### Códigos de estado
 
-| Situación                          | Código |
-| ---------------------------------- | ------ |
-| Creado                             | 201    |
-| OK (leer / actualizar)             | 200    |
-| Eliminado (sin cuerpo)             | 204    |
-| Entrada inválida                   | 400    |
-| No autenticado (sin token válido)  | 401    |
-| Autenticado pero sin permisos      | 403    |
-| No encontrado                      | 404    |
-| Email ya registrado                | 409    |
-| Error del servidor                 | 500    |
+| Situación                         | Código |
+| --------------------------------- | ------ |
+| Creado                            | 201    |
+| OK (leer / actualizar)            | 200    |
+| Eliminado (sin cuerpo)            | 204    |
+| Entrada inválida                  | 400    |
+| No autenticado (sin token válido) | 401    |
+| Autenticado pero sin permisos     | 403    |
+| No encontrado                     | 404    |
+| Email ya registrado               | 409    |
+| Error del servidor                | 500    |
 
 La entrada inválida (falta `titulo`, `estado` fuera del `enum`, `id` mal formado, `page`/`limit` incorrectos) responde **400**, no 500: la culpa es del cliente.
 
@@ -156,13 +158,13 @@ Incluye el registro y el login, los cinco endpoints del CRUD, los casos de pagin
 
 La colección manda `Authorization: Bearer {{token}}` heredado en todos los requests; los públicos y los de error lo sobrescriben. Tres variables se rellenan solas al ejecutarla en orden:
 
-| Variable     | La rellena             |
-| ------------ | ---------------------- |
-| `token`      | *Login*                |
-| `tokenAdmin` | *Login admin*          |
-| `ticketId`   | *Crear ticket*         |
+| Variable     | La rellena     |
+| ------------ | -------------- |
+| `token`      | _Login_        |
+| `tokenAdmin` | _Login admin_  |
+| `ticketId`   | _Crear ticket_ |
 
-*Login admin* necesita un usuario con rol `admin`: regístralo primero y cámbiale el rol en la base, porque la API no permite autoconcederse permisos.
+_Login admin_ necesita un usuario con rol `admin`: regístralo primero y cámbiale el rol en la base, porque la API no permite autoconcederse permisos.
 
 ## Estructura
 
@@ -181,9 +183,9 @@ postman/                 # colección de pruebas
 
 ## Scripts
 
-| Script                | Qué hace                          |
-| --------------------- | --------------------------------- |
-| `npm run dev`         | Servidor con `--watch`            |
-| `npm run build:dev`   | Bundle de desarrollo con webpack  |
-| `npm run build:prod`  | Bundle de producción              |
-| `npm start`           | Ejecuta el bundle de `dist/`      |
+| Script               | Qué hace                         |
+| -------------------- | -------------------------------- |
+| `npm run dev`        | Servidor con `--watch`           |
+| `npm run build:dev`  | Bundle de desarrollo con webpack |
+| `npm run build:prod` | Bundle de producción             |
+| `npm start`          | Ejecuta el bundle de `dist/`     |
