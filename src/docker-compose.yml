@@ -1,0 +1,23 @@
+services:
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-datos:/data/db
+
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/ticketsDB
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET}
+
+volumes:
+  mongo-datos:
