@@ -10,7 +10,8 @@
     "build:dev": "webpack --mode development",
     "build:prod": "webpack --mode production",
     "clean": "rm -rf dist",
-    "prebuild:prod": "npm run clean"
+    "prebuild:prod": "npm run clean",
+    "test": "node --env-file=.env.test --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "keywords": [],
   "author": "Ignacio Rivas D.",
@@ -19,6 +20,8 @@
     "@babel/core": "^8.0.1",
     "@babel/preset-env": "^8.0.2",
     "babel-loader": "^10.1.1",
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2",
     "webpack": "^5.108.4",
     "webpack-cli": "^7.2.1"
   },
