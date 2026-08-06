@@ -1,9 +1,87 @@
 # API de Tickets
 
 API REST de tickets con Express 5, Mongoose y autenticación con JWT.
-Corresponde a los módulos 5 y 6 del curso Desarrollo Backend con Node.js.
 
-## Puesta en marcha
+## Tabla de contenidos
+
+- [API de Tickets](#api-de-tickets)
+  - [Tabla de contenidos](#tabla-de-contenidos)
+  - [Descipción](#descipción)
+    - [Flujo de funcionamiento](#flujo-de-funcionamiento)
+  - [Características](#características)
+  - [Requisitos Previos](#requisitos-previos)
+  - [Instalación](#instalación)
+  - [Modelos](#modelos)
+  - [Autenticación](#autenticación)
+  - [API REST](#api-rest)
+    - [Paginación, filtros y ordenación](#paginación-filtros-y-ordenación)
+    - [Códigos de estado](#códigos-de-estado)
+    - [Ejemplos con curl](#ejemplos-con-curl)
+  - [Colección de pruebas](#colección-de-pruebas)
+  - [Estructura](#estructura)
+  - [Scripts](#scripts)
+  - [Testing](#testing)
+  - [Authored](#authored)
+  - [Co-authored-by;](#co-authored-by)
+  - [Licencia](#licencia)
+
+## Descipción
+
+API RESTful para la creación, lectura, actualización y eliminación (CRUD) de tickets, con sistema de autenticación basado en JWT y control de roles.
+
+### Flujo de funcionamiento
+
+```mermaid
+graph LR
+    A[Cliente / Postman] -->|Credenciales| B[POST /auth/login]
+    B -->|Genera JWT| C[Capa de API REST]
+    C -->|Validación de Middleware| D{¿Token Válido?}
+    D -->|Sí| E{¿Rol Suficiente?}
+    D -->|No| F[Error 401]
+    E -->|Sí| G[Controlador / Servicio]
+    E -->|No| H[Error 403]
+    G -->|Consulta Mongoose| I[(MongoDB)]
+    I -->|Datos| G
+    G -->|Respuesta JSON| A
+```
+
+## Características
+
+- ✅ CRUD completo de tickets (Crear, Leer, Actualizar, Borrar).
+
+- ✅ Paginación, ordenamiento (sort) y filtrado (estado, prioridad).
+
+- ✅ Autenticación de usuarios y generación de JWT (caducidad 1 hora).
+
+- ✅ Autorización basada en roles (Usuarios estándar y Administradores).
+
+- ✅ Tests de integración configurados con Jest y Supertest (Base de datos de prueba aislada).
+
+- ✅ Colección de Postman con scripts de prueba y variables dinámicas.
+
+- ✅ Bundling configurado con Webpack y Babel.
+
+## Requisitos Previos
+
+Antes de comenzar, asegúrate de tener instalado:
+
+| Requisito | Descripción/Versión                        |
+| --------- | ------------------------------------------ |
+| `MONGODB` | Instancia local o cluster en MongoDB Atlas |
+| `NPM`     | (Incluido con Node.js)                     |
+| `NODE.JS` | v26.5.0 o superior                         |
+| `Docker`  | Solamente si se utilizara como contenedor  |
+
+## Instalación
+
+1. Clonar el repositorio
+
+```bash
+  git clone https://github.com/irivasdz19/tickets.git
+  cd tickets
+```
+
+2. Puesta en marcha
 
 ```bash
 npm install
@@ -153,7 +231,7 @@ curl -i -X DELETE http://localhost:3000/tickets/<id> \
 
 ## Colección de pruebas
 
-`postman/API-Tickets.postman_collection.json` — impórtala en Postman o Insomnia.
+`postman/API-Tickets.postman_collection.json` — impórtala en Postman.
 Incluye el registro y el login, los cinco endpoints del CRUD, los casos de paginación/filtros y los errores (400, 401, 403, 404 y 409).
 
 La colección manda `Authorization: Bearer {{token}}` heredado en todos los requests; los públicos y los de error lo sobrescriben. Tres variables se rellenan solas al ejecutarla en orden:
@@ -179,13 +257,44 @@ src/
   middlewares/errores.js # 404 y manejador central de errores
   middlewares/auth.js    # firmarToken, requireAuth y requireRol
 postman/                 # colección de pruebas
+test/
+  auth.test.js           #Prueba de autenticación
+  health.test.js         #Prueba de salud de la api
+  tickets.test.js        #Prueba de Tickets
+Dockerfile               #Configuración para la creación de la imagen Docker
+docker-compose.yml       #Orquestación de contenedores (App + BD)
 ```
 
 ## Scripts
 
-| Script               | Qué hace                         |
-| -------------------- | -------------------------------- |
-| `npm run dev`        | Servidor con `--watch`           |
-| `npm run build:dev`  | Bundle de desarrollo con webpack |
-| `npm run build:prod` | Bundle de producción             |
-| `npm start`          | Ejecuta el bundle de `dist/`     |
+| Script               | Qué hace                                                  |
+| -------------------- | --------------------------------------------------------- |
+| `npm run dev`        | Servidor con `--watch`                                    |
+| `npm run build:dev`  | Bundle de desarrollo con webpack                          |
+| `npm run build:prod` | Bundle de producción                                      |
+| `npm start`          | Ejecuta el bundle de `dist/`                              |
+| `npm test`           | Ejecuta la suite de pruebas usando .env.test y VM Modules |
+
+## Testing
+
+El proyecto incluye pruebas de integración que validan el ciclo de vida de usuarios y tickets.
+
+```bash
+npm run test
+```
+
+Nota: El script inyecta automáticamente la bandera --experimental-vm-modules para soportar importaciones ESM y utiliza las variables del archivo .env.test para no contaminar la base de datos principal.
+
+## Authored
+
+Ignacio Rivas D. — Desarrollo de API REST y Tests — @irivasdz19
+
+## Co-authored-by;
+
+Brayan Diaz C. — @brayandiazc
+
+## Licencia
+
+Este proyecto está bajo la licencia ISC.
+
+⌨️ con ❤️ por @irivasdz19
